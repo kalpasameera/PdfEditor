@@ -41,15 +41,9 @@ namespace ImageQualityEnhancer
             canvas.DrawBitmap(resized, 0, 0, blurPaint);
 
             // Apply a sharpening filter
-            float[] sharpenKernel = {
-                -1, -1, -1,
-                -1,  9, -1,
-                -1, -1, -1
-            };
-
             using var sharpenPaint = new SKPaint
             {
-                ImageFilter = SKImageFilter.CreateMatrixConvolution(new SKSizeI(3, 3), sharpenKernel, 1, 0, new SKPointI(1, 1))
+                ImageFilter = SKImageFilter.CreateHighContrast(true, SKHighContrastConfigInvertStyle.NoInvert, 0.5f)
             };
             canvas.DrawBitmap(resized, 0, 0, sharpenPaint);
 
