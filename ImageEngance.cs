@@ -33,17 +33,17 @@ namespace ImageQualityEnhancer
             using var canvas = new SKCanvas(resized);
             canvas.DrawBitmap(original, new SKRect(0, 0, newWidth, newHeight));
 
-            // Apply a simple blur to smooth out the pixels
-            using var blurPaint = new SKPaint
-            {
-                ImageFilter = SKImageFilter.CreateBlur(1.5f, 1.5f)
-            };
-            canvas.DrawBitmap(resized, 0, 0, blurPaint);
-
             // Apply a sharpening filter
+            var kernel = new float[]
+            {
+                -1, -1, -1,
+                -1, 9, -1,
+                -1, -1, -1
+            };
+
             using var sharpenPaint = new SKPaint
             {
-                ImageFilter = SKImageFilter.CreateHighContrast(true, SKHighContrastConfigInvertStyle.NoInvert, 0.5f)
+                ImageFilter = SKImageFilter.CreateMatrixConvolution(new SKSizeI(3, 3), kernel, 1.0f, 0.0f, new SKPointI(1, 1), SKMatrixConvolutionTileMode.Clamp, true)
             };
             canvas.DrawBitmap(resized, 0, 0, sharpenPaint);
 
