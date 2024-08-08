@@ -1,123 +1,65 @@
-To increase the quality and make the image more zoomable when drawing images using Tesseract OCR in C#, you can apply several techniques such as higher resolution processing, anti-aliasing, and vector graphics. Here are some approaches:
-
-### Step 1: Use High-Resolution Images
-
-Ensure you start with a high-resolution image. Higher resolution provides more detail, which can be crucial for both OCR accuracy and image quality when zooming.
-
-```csharp
+using System;
 using System.Drawing;
-
-Bitmap highResImage = new Bitmap("path_to_high_resolution_image.jpg");
-```
-
-### Step 2: Apply Anti-Aliasing
-
-Use anti-aliasing to smooth out edges and improve the visual quality of drawn shapes and text.
-
-```csharp
 using System.Drawing.Drawing2D;
-
-// Create a Graphics object from the image
-Graphics g = Graphics.FromImage(highResImage);
-
-// Set the smoothing mode to AntiAlias
-g.SmoothingMode = SmoothingMode.AntiAlias;
-
-// Draw shapes or text
-g.DrawRectangle(new Pen(Color.Black, 2), new Rectangle(10, 10, 100, 50));
-g.DrawString("Sample Text", new Font("Arial", 16), Brushes.Black, new PointF(10, 70));
-
-// Dispose the Graphics object
-g.Dispose();
-```
-
-### Step 3: Use Vector Graphics
-
-Whenever possible, use vector graphics for drawing. Vector graphics are resolution-independent and scale well.
-
-```csharp
-// Example of using vector graphics library
-// Note: Install System.Drawing.Common and Svg packages via NuGet
-
-using Svg;
-
-// Create an SVG document
-var svgDoc = new SvgDocument
-{
-    Width = 500,
-    Height = 500
-};
-
-// Create a rectangle element
-var rect = new SvgRectangle
-{
-    X = 10,
-    Y = 10,
-    Width = 100,
-    Height = 50,
-    Stroke = new SvgColourServer(Color.Black),
-    StrokeWidth = 2
-};
-svgDoc.Children.Add(rect);
-
-// Create a text element
-var text = new SvgText("Sample Text")
-{
-    X = new SvgUnitCollection { 10 },
-    Y = new SvgUnitCollection { 70 },
-    FontSize = 16,
-    Fill = new SvgColourServer(Color.Black)
-};
-svgDoc.Children.Add(text);
-
-// Save the SVG document to a file
-svgDoc.Write("output.svg");
-
-// Optionally, convert SVG to high-resolution bitmap
-var svgBitmap = svgDoc.Draw();
-svgBitmap.Save("output.png", ImageFormat.Png);
-```
-
-### Step 4: Increase DPI (Dots Per Inch)
-
-When generating images, especially for print, ensure you use a high DPI setting to improve quality.
-
-```csharp
 using System.Drawing.Imaging;
+using System.IO;
 
-// Set DPI
-highResImage.SetResolution(300, 300); // Example: 300 DPI
-
-// Save the image with the new resolution
-highResImage.Save("high_res_output.jpg", ImageFormat.Jpeg);
-```
-
-### Step 5: Optimize Image Processing
-
-Use OpenCV for advanced image processing techniques to enhance quality, such as sharpening, noise reduction, and contrast adjustment.
-
-```csharp
-using OpenCvSharp;
-
-// Load the image
-Mat img = Cv2.ImRead("path_to_high_resolution_image.jpg");
-
-// Apply sharpening
-Mat kernel = new Mat(3, 3, MatType.CV_32F, new float[]
+class Program
 {
-    -1, -1, -1,
-    -1,  9, -1,
-    -1, -1, -1
-});
-Mat sharpened = new Mat();
-Cv2.Filter2D(img, sharpened, img.Depth(), kernel);
+    static void Main()
+    {
+        string inputPath = "path_to_your_image.jpg";
+        string outputPath = "path_to_save_high_quality_image.jpg";
 
-// Save the processed image
-Cv2.ImWrite("sharpened_image.jpg", sharpened);
-```
+        EnhanceImageQuality(inputPath, outputPath);
+    }
 
-### Combining Techniques
+    static void EnhanceImageQuality(string inputPath, string outputPath)
+    {
+        using (Image originalImage = Image.FromFile(inputPath))
+        {
+            // Create a new Bitmap with the same size as the original image
+            Bitmap highQualityImage = new Bitmap(originalImage.Width, originalImage.Height);
 
-Combine these techniques for the best results. Preprocess your image with OpenCV, draw using anti-aliasing and high DPI settings, and leverage vector graphics where possible.
+            using (Graphics g = Graphics.FromImage(highQualityImage))
+            {
+                // Set the interpolation mode for high-quality scaling
+                g.InterpolationMode = InterpolationMode.HighQualityBicubic;
+                g.PixelOffsetMode = PixelOffsetMode.HighQuality;
+                g.CompositingQuality = CompositingQuality.HighQuality;
+                g.SmoothingMode = SmoothingMode.HighQuality;
 
-By following these steps, you can significantly improve the quality and zoomability of your images in your C# applications.
+                // Draw the original image onto the bitmap with high quality
+                g.DrawImage(originalImage, new Rectangle(0, 0, originalImage.Width, originalImage.Height));
+
+                // Save the high-quality image with the best quality settings
+                SaveJpeg(outputPath, highQualityImage, 100L);
+            }
+        }
+    }
+
+    static void SaveJpeg(string path, Bitmap image, long quality)
+    {
+        // Define the codec parameters for JPEG
+        ImageCodecInfo jpegCodec = GetEncoder(ImageFormat.Jpeg);
+        EncoderParameters encoderParams = new EncoderParameters(1);
+        EncoderParameter qualityParam = new EncoderParameter(System.Drawing.Imaging.Encoder.Quality, quality);
+        encoderParams.Param[0] = qualityParam;
+
+        // Save the image as a JPEG file with the specified quality level
+        image.Save(path, jpegCodec, encoderParams);
+    }
+
+    static ImageCodecInfo GetEncoder(ImageFormat format)
+    {
+        ImageCodecInfo[] codecs = ImageCodecInfo.GetImageDecoders();
+        foreach (ImageCodecInfo codec in codecs)
+        {
+            if (codec.FormatID == format.Guid)
+            {
+                return codec;
+            }
+        }
+        return null;
+    }
+}
