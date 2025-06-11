@@ -1,0 +1,34 @@
+from PIL import Image
+import numpy as np
+import cv2
+
+def better_preprocess_for_ocr(pil_image):
+    # Convert to OpenCV image
+    img = np.array(pil_image)
+    if img.shape[-1] == 4:
+        img = cv2.cvtColor(img, cv2.COLOR_BGRA2BGR)
+
+    # Step 1: Convert to grayscale
+    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+
+    # Step 2: Apply Gaussian blur to reduce noise but preserve edges
+    blur = cv2.GaussianBlur(gray, (3, 3), 0)
+
+    # Step 3: Sharpening with unsharp mask (better than Laplacian for OCR)
+    sharp = cv2.addWeighted(gray, 1.5, blur, -0.5, 0)
+
+    # Step 4: Adaptive threshold for clean binarization
+    binary = cv2.adaptiveThreshold(sharp, 255,
+                                   cv2.ADAPTIVE_THRESH_MEAN_C,
+                                   cv2.THRESH_BINARY, 15, 8)
+
+    # Optional: Resize for better character separation
+    h, w = binary.shape
+    if w < 1000:
+        scale = 1000 / w
+        binary = cv2.resize(binary, None, fx=scale, fy=scale, interpolation=cv2.INTER_CUBIC)
+
+    # Convert back to PIL
+    result = Image.fromarray(binary)
+
+    return result
